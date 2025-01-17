@@ -8,13 +8,13 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { hp, wp } from "@/helpers/common";
 import { theme } from "@/constants/theme";
 import Header from "@/components/Header";
 import Avatar from "@/components/Avatar";
-import { useAuth } from "@/context/AuthContext";
+import { useApp } from "@/context/AppContext";
 import RichTextEditor from "@/components/RichTextEditor";
 import Icon from "@/assets/icons";
 import Button from "@/components/Button";
@@ -22,10 +22,11 @@ import * as ImagePicker from "expo-image-picker";
 import { getFileType, getFileUri } from "@/services/imageService";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { createOrUpdatePost } from "@/services/postService";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 const NewPost = () => {
-    const { user } = useAuth();
+    const post = useLocalSearchParams();
+    const { user } = useApp();
 
     const bodyRef = useRef("");
     const editorRef = useRef(null);
@@ -36,6 +37,16 @@ const NewPost = () => {
         player.loop = true;
         player.play();
     });
+
+    useEffect(() => {
+        if (post && post.id) {
+            bodyRef.current = post.body;
+            setFile(post.file || null);
+            setTimeout(() => {
+                editorRef?.current?.setContentHTML(post.body);
+            }, 500);
+        }
+    }, []);
 
     const onPick = async (isImage) => {
         let mediaConfig = {
@@ -68,6 +79,10 @@ const NewPost = () => {
             userId: user?.id,
         };
 
+        if (post && post.id) {
+            data.id = post.id;
+        }
+
         setLoading(true);
         let res = await createOrUpdatePost(data);
         setLoading(false);
@@ -81,7 +96,9 @@ const NewPost = () => {
     return (
         <ScreenWrapper bg="white">
             <View style={styles.container}>
-                <Header title={"Create Post"} />
+                <Header
+                    title={`${post && post.id ? "Update" : "Create"} Post`}
+                />
                 <ScrollView contentContainerStyle={{ gap: 20 }}>
                     <View style={styles.header}>
                         <Avatar
@@ -148,7 +165,7 @@ const NewPost = () => {
                 </ScrollView>
                 <Button
                     buttonStyle={{ height: hp(6.2) }}
-                    title="Post"
+                    title={post && post.id ? "Update" : "Post"}
                     loading={loading}
                     hasShadow={false}
                     onPress={onSubmit}

@@ -1,4 +1,5 @@
 import {
+    Alert,
     FlatList,
     Pressable,
     RefreshControl,
@@ -6,41 +7,149 @@ import {
     Text,
     View,
 } from "react-native";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { hp, wp } from "@/helpers/common";
 import { theme } from "@/constants/theme";
 import Icon from "@/assets/icons";
 import { router } from "expo-router";
 import Avatar from "@/components/Avatar";
-import { useAuth } from "@/context/AuthContext";
-import { fetchPosts } from "@/services/postService";
+import { useApp } from "@/context/AppContext";
+import { fetchPosts, removePost } from "@/services/postService";
 import PostCard from "@/components/PostCard";
 import Loading from "@/components/Loading";
+import { supabase } from "@/lib/supabase";
+import { DELETE, INSERT } from "@/constants/channel";
+import useGetPosts from "@/hooks/useGetPosts";
+import { PAGE_SIZE } from "@/constants";
 
 const Home = () => {
-    const limitRef = useRef(0);
-    const { user } = useAuth();
+    const {
+        posts,
+        setPosts,
+        refreshing,
+        setRefreshing,
+        hasMore,
+        setHasMore,
+        getPosts,
+        onRefresh,
+    } = useGetPosts();
 
-    const [posts, setPosts] = useState([]);
-    const [refreshing, setRefreshing] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
+    const { user } = useApp();
 
-    const getPosts = async (cnt) => {
-        limitRef.current += cnt;
-        let res = await fetchPosts(limitRef.current);
-        if (res.success) {
-            if (posts.length === res.data.length) setHasMore(false);
-            setPosts(res.data);
+    const handleListenPost = (payload) => {
+        if (payload.eventType === DELETE) {
+            setPosts((prevPosts) => {
+                let newPosts = prevPosts.filter((p) => p.id != payload.old.id);
+                return newPosts;
+            });
         }
     };
 
-    const onRefresh = async () => {
-        setHasMore(true);
-        setRefreshing(true);
-        limitRef.current = 0;
-        await getPosts(2);
-        setRefreshing(false);
+    const handleListenComment = (payload) => {
+        if (payload.eventType === INSERT) {
+            setPosts((prevPosts) => {
+                let newPosts = prevPosts.map((p) => {
+                    if (p.id == payload.new.postId) {
+                        p.comments = [payload.new, ...p.comments];
+                    }
+                    return p;
+                });
+                return newPosts;
+            });
+        } else if (payload.eventType === DELETE) {
+            setPosts((prevPosts) => {
+                let newPosts = prevPosts.map((p) => {
+                    p.comments = p.comments.filter(
+                        (c) => c.id != payload.old.id
+                    );
+                    return p;
+                });
+                return newPosts;
+            });
+        }
+    };
+
+    const handleListenPostLike = (payload) => {
+        if (payload.eventType === INSERT) {
+            setPosts((prevPosts) => {
+                let newPosts = prevPosts.map((p) => {
+                    if (p.id == payload.new.postId) {
+                        p.postLikes = [...p.postLikes, payload.new];
+                    }
+                    return p;
+                });
+                return newPosts;
+            });
+        } else if (payload.eventType === DELETE) {
+            setPosts((prevPosts) => {
+                let newPosts = prevPosts.map((p) => {
+                    p.postLikes = p.postLikes.filter(
+                        (pl) => pl.id != payload.old.id
+                    );
+                    return p;
+                });
+                return newPosts;
+            });
+        }
+    };
+
+    useEffect(() => {
+        let postChannel = supabase
+            .channel("posts")
+            .on(
+                "postgres_changes",
+                { event: DELETE, schema: "public", table: "posts" },
+                handleListenPost
+            )
+            .subscribe();
+        let commentChannel = supabase
+            .channel("comments")
+            .on(
+                "postgres_changes",
+                { event: INSERT, schema: "public", table: "comments" },
+                handleListenComment
+            )
+            .on(
+                "postgres_changes",
+                { event: DELETE, schema: "public", table: "comments" },
+                handleListenComment
+            )
+            .subscribe();
+
+        let postLikeChannel = supabase
+            .channel("postLikes")
+            .on(
+                "postgres_changes",
+                { event: INSERT, schema: "public", table: "postLikes" },
+                handleListenPostLike
+            )
+            .on(
+                "postgres_changes",
+                { event: DELETE, schema: "public", table: "postLikes" },
+                handleListenPostLike
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(postChannel);
+            supabase.removeChannel(commentChannel);
+            supabase.removeChannel(postLikeChannel);
+        };
+    }, []);
+
+    const onDeletePost = async (item) => {
+        let res = await removePost(item?.id);
+        if (!res.success) {
+            Alert.alert("Delete post", res.msg);
+        }
+    };
+
+    const onEditPost = (item) => {
+        router.push({
+            pathname: "newPost",
+            params: { ...item },
+        });
     };
 
     return (
@@ -87,10 +196,24 @@ const Home = () => {
                     data={posts}
                     showsVerticalScrollIndicator={true}
                     contentContainerStyle={styles.listStyle}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={({ item }) => <PostCard item={item} />}
-                    onEndReached={() => {
-                        if (hasMore) getPosts(2);
+                    keyExtractor={(item) => item?.id?.toString()}
+                    renderItem={({ item }) => (
+                        <PostCard
+                            item={{
+                                ...item,
+                                comments: [
+                                    {
+                                        count: item?.comments?.length,
+                                    },
+                                ],
+                            }}
+                            showDelete={item?.userId == user?.id}
+                            onDelete={onDeletePost}
+                            onEdit={onEditPost}
+                        />
+                    )}
+                    onEndReached={async () => {
+                        if (hasMore) await getPosts(PAGE_SIZE);
                     }}
                     onEndReachedThreshold={0}
                     ListFooterComponent={

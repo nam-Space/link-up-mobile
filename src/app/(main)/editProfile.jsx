@@ -12,7 +12,7 @@ import { hp, wp } from "@/helpers/common";
 import { theme } from "@/constants/theme";
 import Header from "@/components/Header";
 import { Image } from "expo-image";
-import { useAuth } from "@/context/AuthContext";
+import { useApp } from "@/context/AppContext";
 import { getUserImageSrc, uploadFile } from "@/services/imageService";
 import Icon from "@/assets/icons";
 import Input from "@/components/input";
@@ -22,7 +22,7 @@ import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 
 const EditProfile = () => {
-    const { user: currentUser, setUserData } = useAuth();
+    const { user: currentUser, setUserData } = useApp();
 
     const [user, setUser] = useState({
         name: "",

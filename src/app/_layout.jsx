@@ -1,22 +1,22 @@
 import { StatusBar, StyleSheet } from "react-native";
 import React, { useEffect } from "react";
 import { router, Stack } from "expo-router";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { AppProvider, useApp } from "@/context/AppContext";
 import { supabase } from "@/lib/supabase";
 import { getUserData } from "@/services/userService";
 
 const _layout = () => {
     return (
-        <AuthProvider>
+        <AppProvider>
             <MainLayout />
-        </AuthProvider>
+        </AppProvider>
     );
 };
 
 export default _layout;
 
 const MainLayout = () => {
-    const { setUserData } = useAuth();
+    const { setUserData } = useApp();
 
     useEffect(() => {
         supabase.auth.onAuthStateChange((_event, session) => {

@@ -1,13 +1,15 @@
 import {
     Alert,
+    FlatList,
     Pressable,
+    RefreshControl,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import React, { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import React, { useEffect, useRef, useState } from "react";
+import { useApp } from "@/context/AppContext";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Header from "@/components/Header";
 import { hp, wp } from "@/helpers/common";
@@ -18,8 +20,53 @@ import { router, useLocalSearchParams } from "expo-router";
 import Button from "@/components/Button";
 import Avatar from "@/components/Avatar";
 import { getUserData } from "@/services/userService";
+import { fetchPosts, removePost } from "@/services/postService";
+import PostCard from "@/components/PostCard";
+import Loading from "@/components/Loading";
+import useGetPosts from "@/hooks/useGetPosts";
+import { PAGE_SIZE } from "@/constants";
 
 const Profile = () => {
+    const { user: currentUser } = useApp();
+    const { id } = useLocalSearchParams();
+
+    const {
+        posts,
+        setPosts,
+        refreshing,
+        setRefreshing,
+        hasMore,
+        setHasMore,
+        getPosts,
+        onRefresh,
+    } = useGetPosts();
+
+    const [user, setUser] = useState(null);
+    const getUserInfo = async (userId) => {
+        if (id) {
+            let res = await getUserData(userId);
+            if (res.success) setUser(res.data);
+        }
+    };
+
+    useEffect(() => {
+        getUserInfo(id);
+    }, [id]);
+
+    const onDeletePost = async (item) => {
+        let res = await removePost(item?.id);
+        if (!res.success) {
+            Alert.alert("Delete post", res.msg);
+        }
+    };
+
+    const onEditPost = (item) => {
+        router.push({
+            pathname: "newPost",
+            params: { ...item },
+        });
+    };
+
     const onLogout = async () => {
         const { error } = await supabase.auth.signOut();
         if (error) {
@@ -44,7 +91,58 @@ const Profile = () => {
 
     return (
         <ScreenWrapper bg={"white"}>
-            <UserHeader handleLogout={handleLogout} />
+            <FlatList
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                    />
+                }
+                data={posts}
+                showsVerticalScrollIndicator={true}
+                contentContainerStyle={styles.listStyle}
+                keyExtractor={(item) => item?.id?.toString()}
+                renderItem={({ item }) => (
+                    <PostCard
+                        item={{
+                            ...item,
+                            comments: [
+                                {
+                                    count: item?.comments?.length,
+                                },
+                            ],
+                        }}
+                        showDelete={item?.userId == currentUser?.id}
+                        onDelete={onDeletePost}
+                        onEdit={onEditPost}
+                    />
+                )}
+                onEndReached={async () => {
+                    if (hasMore) await getPosts(PAGE_SIZE, id);
+                }}
+                onEndReachedThreshold={0}
+                ListHeaderComponent={<UserHeader handleLogout={handleLogout} />}
+                ListHeaderComponentStyle={{ marginBottom: 30 }}
+                ListFooterComponent={
+                    hasMore ? (
+                        <View
+                            style={{
+                                marginVertical: posts.length === 0 ? 200 : 30,
+                            }}
+                        >
+                            <Loading />
+                        </View>
+                    ) : (
+                        <View
+                            style={{
+                                marginVertical: 30,
+                            }}
+                        >
+                            <Text style={styles.noPosts}>No more posts</Text>
+                        </View>
+                    )
+                }
+            />
         </ScreenWrapper>
     );
 };
@@ -52,7 +150,7 @@ const Profile = () => {
 export default Profile;
 
 const UserHeader = ({ handleLogout }) => {
-    const { user: currentUser, setAuth } = useAuth();
+    const { user: currentUser } = useApp();
     const { id } = useLocalSearchParams();
 
     const [user, setUser] = useState(null);
@@ -63,6 +161,7 @@ const UserHeader = ({ handleLogout }) => {
             if (res.success) setUser(res.data);
         }
     };
+
     useEffect(() => {
         getUserInfo(id);
     }, [id, currentUser]);

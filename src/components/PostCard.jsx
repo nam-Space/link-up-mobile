@@ -1,5 +1,6 @@
 import {
     Alert,
+    Easing,
     Image,
     Share,
     StyleSheet,
@@ -21,9 +22,11 @@ import {
 } from "@/services/imageService";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { router } from "expo-router";
-import { useAuth } from "@/context/AuthContext";
+import { useApp } from "@/context/AppContext";
 import { createPostLike, removePostLike } from "@/services/postService";
 import Loading from "./Loading";
+import Popover from "react-native-popover-view";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 const textStyle = {
     color: theme.colors.dark,
@@ -54,8 +57,14 @@ const tagsStyles = {
     },
 };
 
-const PostCard = ({ item, hasShadow = true }) => {
-    const { user } = useAuth();
+const PostCard = ({
+    item,
+    hasShadow = true,
+    showDelete = false,
+    onDelete = () => {},
+    onEdit = () => {},
+}) => {
+    const { user } = useApp();
     const shadowStyles = {
         shadowOffset: {
             width: 0,
@@ -65,13 +74,15 @@ const PostCard = ({ item, hasShadow = true }) => {
         shadowRadius: 6,
         elevation: 1,
     };
-
+    const [showThreeDot, setShowThreeDot] = useState(false);
+    const [countComment, setCountComment] = useState(0);
     const [likes, setLikes] = useState([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         setLikes(item?.postLikes);
-    }, []);
+        setCountComment(item?.comments[0]?.count);
+    }, [JSON.stringify(item)]);
 
     const player = useVideoPlayer(getFileUri(item?.file), (player) => {
         player.loop = true;
@@ -117,6 +128,33 @@ const PostCard = ({ item, hasShadow = true }) => {
         Share.share(content);
     };
 
+    const handlePostDelete = () => {
+        Alert.alert("Confirm", "Are you sure you want to delete?", [
+            {
+                text: "Cancel",
+                onPress: () => {},
+                style: "cancel",
+            },
+            {
+                text: "Delete",
+                onPress: () => {
+                    setShowThreeDot(false);
+                    onDelete(item);
+                },
+                style: "destructive",
+            },
+        ]);
+    };
+
+    const handlePostEdit = () => {
+        setShowThreeDot(false);
+        onEdit(item);
+    };
+
+    const handleReportPost = () => {
+        Alert.alert("Notification", "Sorry! This feature is updating");
+    };
+
     const liked = likes?.find((like) => like.userId == user?.id) ? true : false;
 
     return (
@@ -139,14 +177,50 @@ const PostCard = ({ item, hasShadow = true }) => {
                         </View>
                     </View>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={openPostDetails}>
-                    <Icon
-                        name="threeDotsHorizontal"
-                        size={hp(3.4)}
-                        strokeWidth={3}
-                        color={theme.colors.text}
-                    />
-                </TouchableOpacity>
+                <Popover
+                    isVisible={showThreeDot}
+                    onRequestClose={() => setShowThreeDot(false)}
+                    from={
+                        <TouchableOpacity onPress={() => setShowThreeDot(true)}>
+                            <Icon
+                                name="threeDotsHorizontal"
+                                size={hp(3.4)}
+                                strokeWidth={3}
+                                color={theme.colors.text}
+                            />
+                        </TouchableOpacity>
+                    }
+                >
+                    {showDelete ? (
+                        <View style={styles.actions}>
+                            <TouchableOpacity onPress={handlePostEdit}>
+                                <Icon
+                                    name="edit"
+                                    size={hp(2.5)}
+                                    color={theme.colors.text}
+                                />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handlePostDelete}>
+                                <Icon
+                                    name="delete"
+                                    size={hp(2.5)}
+                                    color={theme.colors.rose}
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <TouchableOpacity onPress={handleReportPost}>
+                            <View style={[styles.actions, { gap: 5 }]}>
+                                <MaterialIcons
+                                    name="report-problem"
+                                    size={24}
+                                    color="black"
+                                />
+                                <Text>Report this post</Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
+                </Popover>
             </View>
             <View style={styles.content}>
                 <View style={styles.postBody}>
@@ -189,7 +263,7 @@ const PostCard = ({ item, hasShadow = true }) => {
                             }
                         />
                     </TouchableOpacity>
-                    <Text style={styles.count}>{likes?.length}</Text>
+                    <Text style={styles.count}>{likes?.length || "0"}</Text>
                 </View>
                 <View style={styles.footerButton}>
                     <TouchableOpacity onPress={openPostDetails}>
@@ -199,7 +273,7 @@ const PostCard = ({ item, hasShadow = true }) => {
                             color={theme.colors.textLight}
                         />
                     </TouchableOpacity>
-                    <Text style={styles.count}>{"0"}</Text>
+                    <Text style={styles.count}>{countComment || "0"}</Text>
                 </View>
                 <View style={styles.footerButton}>
                     {loading ? (
@@ -280,6 +354,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 18,
+        padding: 10,
     },
     count: {
         color: theme.colors.text,

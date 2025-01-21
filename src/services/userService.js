@@ -4,7 +4,11 @@ export const getUserData = async (userId) => {
     try {
         const { data, error } = await supabase
             .from('users')
-            .select()
+            .select(`
+                *,
+                following:follows!follows_followerId_fkey(*),
+                followers:follows!follows_followeeId_fkey(*)
+            `)
             .eq('id', userId)
             .single()
 

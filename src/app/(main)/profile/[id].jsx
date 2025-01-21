@@ -8,7 +8,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useApp } from "@/context/AppContext";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Header from "@/components/Header";
@@ -19,16 +19,21 @@ import { supabase } from "@/lib/supabase";
 import { router, useLocalSearchParams } from "expo-router";
 import Button from "@/components/Button";
 import Avatar from "@/components/Avatar";
-import { getUserData } from "@/services/userService";
-import { fetchPosts, removePost } from "@/services/postService";
+import { removePost } from "@/services/postService";
 import PostCard from "@/components/PostCard";
 import Loading from "@/components/Loading";
 import useGetPosts from "@/hooks/useGetPosts";
-import { PAGE_SIZE } from "@/constants";
+import { PAGE_SIZE_POST } from "@/constants";
+import useGetUserDetail from "@/hooks/useGetUserDetail";
+import { createFollow, removeFollow } from "@/services/followService";
+import Popover from "react-native-popover-view";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { DELETE, INSERT, UPDATE } from "@/constants/channel";
 
 const Profile = () => {
     const { user: currentUser } = useApp();
     const { id } = useLocalSearchParams();
+    const { user, setUser } = useGetUserDetail(id);
 
     const {
         posts,
@@ -40,18 +45,6 @@ const Profile = () => {
         getPosts,
         onRefresh,
     } = useGetPosts();
-
-    const [user, setUser] = useState(null);
-    const getUserInfo = async (userId) => {
-        if (id) {
-            let res = await getUserData(userId);
-            if (res.success) setUser(res.data);
-        }
-    };
-
-    useEffect(() => {
-        getUserInfo(id);
-    }, [id]);
 
     const onDeletePost = async (item) => {
         let res = await removePost(item?.id);
@@ -91,58 +84,65 @@ const Profile = () => {
 
     return (
         <ScreenWrapper bg={"white"}>
-            <FlatList
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                    />
-                }
-                data={posts}
-                showsVerticalScrollIndicator={true}
-                contentContainerStyle={styles.listStyle}
-                keyExtractor={(item) => item?.id?.toString()}
-                renderItem={({ item }) => (
-                    <PostCard
-                        item={{
-                            ...item,
-                            comments: [
-                                {
-                                    count: item?.comments?.length,
-                                },
-                            ],
-                        }}
-                        showDelete={item?.userId == currentUser?.id}
-                        onDelete={onDeletePost}
-                        onEdit={onEditPost}
-                    />
-                )}
-                onEndReached={async () => {
-                    if (hasMore) await getPosts(PAGE_SIZE, id);
-                }}
-                onEndReachedThreshold={0}
-                ListHeaderComponent={<UserHeader handleLogout={handleLogout} />}
-                ListHeaderComponentStyle={{ marginBottom: 30 }}
-                ListFooterComponent={
-                    hasMore ? (
-                        <View
-                            style={{
-                                marginVertical: posts.length === 0 ? 200 : 30,
+            {user && (
+                <FlatList
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                        />
+                    }
+                    data={posts}
+                    showsVerticalScrollIndicator={true}
+                    contentContainerStyle={styles.listStyle}
+                    keyExtractor={(item) => item?.id?.toString()}
+                    renderItem={({ item }) => (
+                        <PostCard
+                            item={{
+                                ...item,
+                                comments: [
+                                    {
+                                        count: item?.comments?.length,
+                                    },
+                                ],
                             }}
-                        >
-                            <Loading />
-                        </View>
-                    ) : (
-                        <View
-                            style={{
-                                marginVertical: 30,
-                            }}
-                        >
-                            <Text style={styles.noPosts}>No more posts</Text>
-                        </View>
-                    )
-                }
-            />
+                            showDelete={item?.userId == currentUser?.id}
+                            onDelete={onDeletePost}
+                            onEdit={onEditPost}
+                        />
+                    )}
+                    onEndReached={async () => {
+                        if (hasMore) await getPosts(PAGE_SIZE_POST, id);
+                    }}
+                    onEndReachedThreshold={100}
+                    ListHeaderComponent={
+                        <UserHeader handleLogout={handleLogout} />
+                    }
+                    ListHeaderComponentStyle={{ marginBottom: 30 }}
+                    ListFooterComponent={
+                        hasMore ? (
+                            <View
+                                style={{
+                                    marginVertical:
+                                        posts.length === 0 ? 200 : 30,
+                                }}
+                            >
+                                <Loading />
+                            </View>
+                        ) : (
+                            <View
+                                style={{
+                                    marginVertical: 30,
+                                }}
+                            >
+                                <Text style={styles.noPosts}>
+                                    No more posts
+                                </Text>
+                            </View>
+                        )
+                    }
+                />
+            )}
         </ScreenWrapper>
     );
 };
@@ -150,21 +150,123 @@ const Profile = () => {
 export default Profile;
 
 const UserHeader = ({ handleLogout }) => {
-    const { user: currentUser } = useApp();
+    const { user: currentUser, setUser: setCurrentUser } = useApp();
     const { id } = useLocalSearchParams();
 
-    const [user, setUser] = useState(null);
+    const { user, setUser } = useGetUserDetail(id);
+    const [showThreeDot, setShowThreeDot] = useState(false);
 
-    const getUserInfo = async (userId) => {
-        if (id) {
-            let res = await getUserData(userId);
-            if (res.success) setUser(res.data);
+    const [loadingFollow, setLoadingFollow] = useState(false);
+
+    const handleListenFollowers = (payload) => {
+        if (payload.eventType === INSERT) {
+            setUser((prevUser) => {
+                let newFollowers = [payload.new, ...prevUser.followers];
+                const newUser = { ...prevUser };
+                newUser.followers = newFollowers;
+                return newUser;
+            });
+            setCurrentUser((prevUser) => {
+                let newFollowing = [payload.new, ...prevUser.following];
+                const newUser = { ...prevUser };
+                newUser.following = newFollowing;
+                return newUser;
+            });
+        } else if (payload.eventType === DELETE) {
+            setUser((prevUser) => {
+                const newUser = { ...prevUser };
+                newUser.followers = [...newUser.followers].filter((item) => {
+                    return item.id != payload.old.id;
+                });
+                return newUser;
+            });
+            setCurrentUser((prevUser) => {
+                const newUser = { ...prevUser };
+                newUser.following = [...newUser.following].filter((item) => {
+                    return item.id != payload.old.id;
+                });
+                return newUser;
+            });
         }
     };
 
     useEffect(() => {
-        getUserInfo(id);
-    }, [id, currentUser]);
+        let followerChannel = supabase
+            .channel("follows")
+            .on(
+                "postgres_changes",
+                {
+                    event: INSERT,
+                    schema: "public",
+                    table: "follows",
+                    filter: `followeeId=eq.${id}`,
+                },
+                handleListenFollowers
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: DELETE,
+                    schema: "public",
+                    table: "follows",
+                },
+                handleListenFollowers
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(followerChannel);
+        };
+    }, [id]);
+
+    useEffect(() => {
+        if (currentUser?.id === id) {
+            setUser({ ...currentUser });
+        }
+    }, [currentUser]);
+
+    const handleCreateFollow = async () => {
+        setLoadingFollow(true);
+        let res = await createFollow({
+            followerId: currentUser?.id,
+            followeeId: user?.id,
+        });
+        setLoadingFollow(false);
+        if (res.success) {
+            // setUser((prevUser) => {
+            //     let newFollowers = [res.data, ...prevUser.followers];
+            //     prevUser.followers = newFollowers;
+            //     return prevUser;
+            // });
+        } else {
+            Alert.alert("Follow user error", res.msg);
+        }
+    };
+
+    const handleDeleteFollow = async () => {
+        setLoadingFollow(true);
+        let res = await removeFollow(currentUser?.id, user?.id);
+        setLoadingFollow(false);
+        if (res.success) {
+            // setUser((prevUser) => {
+            //     const newUser = { ...prevUser };
+            //     newUser.followers = [...newUser.followers].filter((item) => {
+            //         return item.followerId != currentUser?.id;
+            //     });
+            //     return prevUser;
+            // });
+        } else {
+            Alert.alert("Unfollow user error", res.msg);
+        }
+    };
+
+    const handleReportPost = () => {
+        Alert.alert("Notification", "Sorry! This feature is updating");
+    };
+
+    const checkUserFollow = user?.followers?.some(
+        (item) => item?.followerId == currentUser?.id
+    );
 
     return (
         <View
@@ -184,39 +286,40 @@ const UserHeader = ({ handleLogout }) => {
                         <Icon name={"logout"} color={theme.colors.rose} />
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity
-                        style={[styles.followUnfollow]}
-                        onPress={handleLogout}
+                    <Popover
+                        isVisible={showThreeDot}
+                        onRequestClose={() => setShowThreeDot(false)}
+                        from={
+                            <TouchableOpacity
+                                style={[
+                                    styles.logoutButton,
+                                    {
+                                        backgroundColor: theme.colors.gray,
+                                        padding: 2,
+                                    },
+                                ]}
+                                onPress={() => setShowThreeDot(true)}
+                            >
+                                <Icon
+                                    name="threeDotsHorizontal"
+                                    size={hp(3.4)}
+                                    strokeWidth={3}
+                                    color={theme.colors.text}
+                                />
+                            </TouchableOpacity>
+                        }
                     >
-                        <Button
-                            title="Follow"
-                            buttonStyle={{
-                                backgroundColor: theme.colors.textDark,
-                                paddingHorizontal: 10,
-                                height: hp(4),
-                            }}
-                            hasShadow={false}
-                        />
-                    </TouchableOpacity>
-                    // <TouchableOpacity
-                    //     style={[styles.followUnfollow]}
-                    //     onPress={handleLogout}
-                    // >
-                    //     <Button
-                    //         title="Unfollow"
-                    //         buttonStyle={{
-                    //             backgroundColor: theme.colors.textDark,
-                    //             borderWidth: 2,
-                    //             backgroundColor: "white",
-                    //             paddingHorizontal: 10,
-                    //             height: hp(4),
-                    //         }}
-                    //         textStyle={{
-                    //             color: theme.colors.textDark,
-                    //         }}
-                    //         hasShadow={false}
-                    //     />
-                    // </TouchableOpacity>
+                        <TouchableOpacity onPress={handleReportPost}>
+                            <View style={[styles.actions, { gap: 5 }]}>
+                                <MaterialIcons
+                                    name="report-problem"
+                                    size={24}
+                                    color="black"
+                                />
+                                <Text>Report this post</Text>
+                            </View>
+                        </TouchableOpacity>
+                    </Popover>
                 )}
             </View>
             <View style={styles.container}>
@@ -244,11 +347,97 @@ const UserHeader = ({ handleLogout }) => {
                         <Text style={styles.userName}>{user?.name}</Text>
                         <Text style={styles.infoText}>{user?.address}</Text>
                         <View style={{ flexDirection: "row", gap: 15 }}>
-                            <Text style={styles.infoFollow}>0 followers</Text>
+                            <TouchableOpacity
+                                onPress={() =>
+                                    router.push(`/followers/${user?.id}`)
+                                }
+                            >
+                                <Text style={styles.infoFollow}>
+                                    {user?.followers?.length} followers
+                                </Text>
+                            </TouchableOpacity>
                             <Text style={styles.infoText}>|</Text>
-                            <Text style={styles.infoFollow}>0 following</Text>
+                            <TouchableOpacity
+                                onPress={() =>
+                                    router.push(`/following/${user?.id}`)
+                                }
+                            >
+                                <Text style={styles.infoFollow}>
+                                    {user?.following?.length} following
+                                </Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
+                    {currentUser?.id !== user?.id && (
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                justifyContent: "center",
+                                gap: 15,
+                            }}
+                        >
+                            <View
+                                style={{
+                                    flex: 1,
+                                }}
+                            >
+                                {checkUserFollow ? (
+                                    <Button
+                                        loading={loadingFollow}
+                                        onPress={handleDeleteFollow}
+                                        title="Unfollow"
+                                        buttonStyle={{
+                                            borderWidth: loadingFollow ? 0 : 2,
+                                            backgroundColor: "white",
+                                            paddingHorizontal: 10,
+                                            height: hp(4),
+                                        }}
+                                        textStyle={{
+                                            color: theme.colors.textDark,
+                                            fontSize: hp(2),
+                                        }}
+                                        hasShadow={false}
+                                    />
+                                ) : (
+                                    <Button
+                                        loading={loadingFollow}
+                                        onPress={handleCreateFollow}
+                                        title="Follow"
+                                        buttonStyle={{
+                                            backgroundColor:
+                                                theme.colors.textDark,
+                                            paddingHorizontal: 10,
+                                            height: hp(4),
+                                        }}
+                                        textStyle={{
+                                            fontSize: hp(2),
+                                        }}
+                                        hasShadow={false}
+                                    />
+                                )}
+                            </View>
+                            <View
+                                style={{
+                                    flex: 1,
+                                }}
+                            >
+                                <Button
+                                    title="Chat"
+                                    buttonStyle={{
+                                        backgroundColor: theme.colors.gray,
+                                        paddingHorizontal: 10,
+                                        height: hp(4),
+                                    }}
+                                    textStyle={{
+                                        color: theme.colors.textDark,
+                                        fontSize: hp(2),
+                                    }}
+                                    hasShadow={false}
+                                />
+                            </View>
+                        </View>
+                    )}
+
                     <View style={{ gap: 10 }}>
                         <View style={styles.info}>
                             <Icon
@@ -291,6 +480,12 @@ const styles = StyleSheet.create({
     headerShape: {
         width: wp(100),
         height: hp(20),
+    },
+    actions: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 18,
+        padding: 10,
     },
     avatarContainer: {
         height: hp(12),

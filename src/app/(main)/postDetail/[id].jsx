@@ -25,6 +25,11 @@ import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import Input from "@/components/input";
 import Icon from "@/assets/icons";
 import CommentItem from "@/components/CommentItem";
+import { PAGE_SIZE_COMMENT } from "@/constants";
+import useGetPostDetail from "@/hooks/useGetPostDetail";
+import useGetComments from "@/hooks/useGetComments";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
 
 const PostDetail = () => {
     const { id } = useLocalSearchParams();
@@ -32,21 +37,12 @@ const PostDetail = () => {
 
     const inputRef = useRef(null);
     const commentRef = useRef("");
-    const [loadingPost, setLoadingPost] = useState(false);
-    const [loading, setLoading] = useState(false);
 
-    const [post, setPost] = useState(null);
+    const { post, setPost, loadingPost } = useGetPostDetail(id);
 
-    useEffect(() => {
-        getPostDetail();
-    }, [id]);
+    const { comments, setComments, hasMore, getComments } = useGetComments(id);
 
-    const getPostDetail = async () => {
-        setLoadingPost(true);
-        let res = await fetchPostDetail(id);
-        setLoadingPost(false);
-        if (res.success) setPost(res.data);
-    };
+    const [loadingSend, setLoadingSend] = useState(false);
 
     const onNewComment = async () => {
         if (!commentRef.current) return null;
@@ -55,9 +51,9 @@ const PostDetail = () => {
             postId: id,
             text: commentRef.current,
         };
-        setLoading(true);
+        setLoadingSend(true);
         let res = await createComment(data);
-        setLoading(false);
+        setLoadingSend(false);
         if (res.success) {
             setPost({
                 ...post,
@@ -73,6 +69,18 @@ const PostDetail = () => {
                     ...post.comments,
                 ],
             });
+            setComments([
+                {
+                    ...res.data,
+                    user: {
+                        id: user.id,
+                        name: user.name,
+                        image: user.image,
+                    },
+                },
+                ...comments,
+            ]);
+
             inputRef?.current?.clear();
             commentRef.current = "";
         } else {
@@ -90,6 +98,12 @@ const PostDetail = () => {
                     (c) => c.id != comment.id
                 );
                 return updatedPost;
+            });
+            setComments((prevComments) => {
+                let newComments = prevComments.filter(
+                    (c) => c.id != comment.id
+                );
+                return newComments;
             });
         } else {
             Alert.alert("Delete comment error", res.msg);
@@ -114,168 +128,169 @@ const PostDetail = () => {
     };
 
     return (
-        <Animated.View
-            entering={FadeIn}
-            style={{
-                flex: 1,
-                justifyContent: "flex-end",
-                backgroundColor: "#00000040",
-            }}
-        >
-            <Pressable
-                onPress={() => router.back()}
-                style={StyleSheet.absoluteFill}
-            />
-            <Animated.View
-                entering={SlideInDown}
-                style={{
-                    height: "80%",
-                    width: "100%",
-                    backgroundColor: "white",
-                }}
-            >
-                <View style={styles.container}>
-                    {loadingPost ? (
-                        <View
-                            style={{
-                                marginVertical: 200,
-                            }}
-                        >
-                            <Loading />
-                        </View>
-                    ) : !post ? (
-                        <View
-                            style={[
-                                styles.center,
-                                {
-                                    justifyContent: "flex-start",
-                                    marginTop: 100,
-                                },
-                            ]}
-                        >
-                            <Text style={styles.notFound}>Post not found!</Text>
-                        </View>
-                    ) : (
-                        <FlatList
-                            data={post?.comments}
-                            showsVerticalScrollIndicator={true}
-                            contentContainerStyle={styles.list}
-                            keyExtractor={(item) => item?.id?.toString()}
-                            renderItem={({ item, index }) => (
-                                <View
-                                    style={{ marginTop: index > 0 ? 17 : 15 }}
-                                >
-                                    <CommentItem
-                                        item={item}
-                                        canDelete={
-                                            user.id === item.userId ||
-                                            user.id === post.userId
+        // <Animated.View
+        //     entering={FadeIn}
+        //     style={{
+        //         flex: 1,
+        //         justifyContent: "flex-end",
+        //         backgroundColor: "#00000040",
+        //     }}
+        // >
+        //     <Pressable
+        //         onPress={() => router.back()}
+        //         style={StyleSheet.absoluteFill}
+        //     />
+        //     <Animated.View
+        //         entering={SlideInDown}
+        //         style={{
+        //             height: "80%",
+        //             width: "100%",
+        //             backgroundColor: "white",
+        //         }}
+        //     >
+        <ScreenWrapper bg="white">
+            <View style={styles.container}>
+                <Header
+                    title={`Post Detail`}
+                    headerStyle={{ marginHorizontal: wp(4) }}
+                />
+                {loadingPost ? (
+                    <View
+                        style={{
+                            marginVertical: 200,
+                        }}
+                    >
+                        <Loading />
+                    </View>
+                ) : !post ? (
+                    <View
+                        style={[
+                            styles.center,
+                            {
+                                justifyContent: "flex-start",
+                                marginTop: 100,
+                            },
+                        ]}
+                    >
+                        <Text style={styles.notFound}>Post not found!</Text>
+                    </View>
+                ) : (
+                    <FlatList
+                        data={comments}
+                        showsVerticalScrollIndicator={true}
+                        contentContainerStyle={styles.list}
+                        keyExtractor={(item) => item?.id?.toString()}
+                        renderItem={({ item, index }) => (
+                            <View style={{ marginTop: index > 0 ? 17 : 15 }}>
+                                <CommentItem
+                                    item={item}
+                                    canDelete={
+                                        user.id === item.userId ||
+                                        user.id === post.userId
+                                    }
+                                    onDelete={() => onDeleteComment(item)}
+                                />
+                            </View>
+                        )}
+                        ListHeaderComponent={
+                            <>
+                                <PostCard
+                                    item={{
+                                        ...post,
+                                        comments: [
+                                            {
+                                                count: post?.comments?.length,
+                                            },
+                                        ],
+                                    }}
+                                    showDelete={post?.userId == user?.id}
+                                    onDelete={onDeletePost}
+                                    onEdit={onEditPost}
+                                />
+                                <View style={styles.inputContainer}>
+                                    <Input
+                                        inputRef={inputRef}
+                                        placeholder="Type comment..."
+                                        onChangeText={(val) =>
+                                            (commentRef.current = val)
                                         }
-                                        onDelete={() => onDeleteComment(item)}
-                                    />
-                                </View>
-                            )}
-                            ListHeaderComponent={
-                                <>
-                                    <PostCard
-                                        item={{
-                                            ...post,
-                                            comments: [
-                                                {
-                                                    count: post?.comments
-                                                        ?.length,
-                                                },
-                                            ],
+                                        placeholderTextColor={
+                                            theme.colors.textLight
+                                        }
+                                        containerStyle={{
+                                            flex: 1,
+                                            height: hp(6.2),
+                                            borderRadius: theme.radius.xl,
                                         }}
-                                        showDelete={post?.userId == user?.id}
-                                        onDelete={onDeletePost}
-                                        onEdit={onEditPost}
                                     />
-                                    <View style={styles.inputContainer}>
-                                        <Input
-                                            inputRef={inputRef}
-                                            placeholder="Type comment..."
-                                            onChangeText={(val) =>
-                                                (commentRef.current = val)
-                                            }
-                                            placeholderTextColor={
-                                                theme.colors.textLight
-                                            }
-                                            containerStyle={{
-                                                flex: 1,
-                                                height: hp(6.2),
-                                                borderRadius: theme.radius.xl,
-                                            }}
-                                        />
-                                        {loading ? (
-                                            <View style={styles.loading}>
-                                                <Loading size="small" />
-                                            </View>
-                                        ) : (
-                                            <TouchableOpacity
-                                                style={styles.sendIcon}
-                                                onPress={onNewComment}
-                                            >
-                                                <Icon
-                                                    name="send"
-                                                    color={
-                                                        theme.colors.primaryDark
-                                                    }
-                                                />
-                                            </TouchableOpacity>
-                                        )}
-                                    </View>
-                                    {post?.comments?.length === 0 && (
-                                        <View
+                                    {loadingSend ? (
+                                        <View style={styles.loading}>
+                                            <Loading size="small" />
+                                        </View>
+                                    ) : (
+                                        <TouchableOpacity
+                                            style={styles.sendIcon}
+                                            onPress={onNewComment}
+                                        >
+                                            <Icon
+                                                name="send"
+                                                color={theme.colors.primaryDark}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                                {comments?.length === 0 && (
+                                    <View
+                                        style={{
+                                            marginTop: 17,
+                                        }}
+                                    >
+                                        <Text
                                             style={{
-                                                marginTop: 17,
+                                                color: theme.colors.text,
+                                                marginLeft: 5,
                                             }}
                                         >
-                                            <Text
-                                                style={{
-                                                    color: theme.colors.text,
-                                                    marginLeft: 5,
-                                                }}
-                                            >
-                                                Be first to comment!
-                                            </Text>
-                                        </View>
-                                    )}
-                                </>
-                            }
-                            onEndReached={() => {
-                                // if (hasMore) getPosts(5);
-                            }}
-                            onEndReachedThreshold={0}
-                            // ListFooterComponent={
-                            //     hasMore ? (
-                            //         <View
-                            //             style={{
-                            //                 marginVertical:
-                            //                     posts.length === 0
-                            //                         ? 200
-                            //                         : 30,
-                            //             }}
-                            //         >
-                            //             <Loading />
-                            //         </View>
-                            //     ) : (
-                            //         <View
-                            //             style={{
-                            //                 marginVertical: 30,
-                            //             }}
-                            //         >
-                            //             <Text style={styles.noPosts}>
-                            //                 No more posts
-                            //             </Text>
-                            //         </View>
-                            //     )
-                            // }
-                        />
-                    )}
-                </View>
-            </Animated.View>
-        </Animated.View>
+                                            Be first to comment!
+                                        </Text>
+                                    </View>
+                                )}
+                            </>
+                        }
+                        onEndReached={() => {
+                            if (hasMore) getComments(PAGE_SIZE_COMMENT, id);
+                        }}
+                        onEndReachedThreshold={0}
+                        ListFooterComponent={
+                            hasMore ? (
+                                <View
+                                    style={{
+                                        marginVertical:
+                                            post?.comments?.length === 0
+                                                ? 200
+                                                : 30,
+                                    }}
+                                >
+                                    <Loading />
+                                </View>
+                            ) : (
+                                <View
+                                    style={{
+                                        marginVertical: 30,
+                                    }}
+                                >
+                                    <Text style={styles.noComments}>
+                                        No more comments
+                                    </Text>
+                                </View>
+                            )
+                        }
+                    />
+                )}
+            </View>
+        </ScreenWrapper>
+        //     </Animated.View>
+        // </Animated.View>
     );
 };
 
@@ -285,7 +300,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "white",
-        paddingVertical: wp(7),
     },
     inputContainer: {
         flexDirection: "row",
@@ -321,5 +335,10 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         transform: [{ scale: 1.3 }],
+    },
+    noComments: {
+        fontSize: hp(2),
+        textAlign: "center",
+        color: theme.colors.text,
     },
 });

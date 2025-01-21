@@ -124,6 +124,22 @@ export const fetchPostDetail = async (postId) => {
 
 export const createPostLike = async (postLike) => {
     try {
+        const { data: dataFetch, error: errorFetch } = await supabase
+            .from('postLikes')
+            .select(`
+                    *
+                `)
+            .eq('postId', postLike.postId)
+            .eq('userId', postLike.userId)
+            .single()
+
+        if (dataFetch) {
+            return {
+                success: false,
+                msg: 'You already have liked this post'
+            }
+        }
+
         const { data, error } = await supabase
             .from('postLikes')
             .insert(postLike)
@@ -149,6 +165,22 @@ export const createPostLike = async (postLike) => {
 
 export const removePostLike = async (postId, userId) => {
     try {
+        const { data: dataFetch, error: errorFetch } = await supabase
+            .from('postLikes')
+            .select(`
+                    *
+                `)
+            .eq('postId', postId)
+            .eq('userId', userId)
+            .single()
+
+        if (!dataFetch) {
+            return {
+                success: false,
+                msg: 'You already have disliked this post'
+            }
+        }
+
         const { error } = await supabase
             .from('postLikes')
             .delete()

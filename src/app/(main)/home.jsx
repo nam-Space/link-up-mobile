@@ -21,7 +21,7 @@ import Loading from "@/components/Loading";
 import { supabase } from "@/lib/supabase";
 import { DELETE, INSERT } from "@/constants/channel";
 import useGetPosts from "@/hooks/useGetPosts";
-import { PAGE_SIZE } from "@/constants";
+import { PAGE_SIZE_POST } from "@/constants";
 
 const Home = () => {
     const {
@@ -213,7 +213,7 @@ const Home = () => {
                         />
                     )}
                     onEndReached={async () => {
-                        if (hasMore) await getPosts(PAGE_SIZE);
+                        if (hasMore) await getPosts(PAGE_SIZE_POST);
                     }}
                     onEndReachedThreshold={0}
                     ListFooterComponent={

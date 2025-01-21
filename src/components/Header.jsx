@@ -4,15 +4,21 @@ import BackButton from "./BackButton";
 import { hp } from "@/helpers/common";
 import { theme } from "@/constants/theme";
 
-const Header = ({ title, showBackButton = true, mb = 10 }) => {
+const Header = ({
+    title,
+    headerStyle,
+    textStyle,
+    showBackButton = true,
+    mb = 10,
+}) => {
     return (
-        <View style={[styles.container, { marginBottom: mb }]}>
+        <View style={[styles.container, headerStyle, { marginBottom: mb }]}>
             {showBackButton && (
                 <View style={styles.backButton}>
                     <BackButton />
                 </View>
             )}
-            <Text style={styles.title}>{title || ""}</Text>
+            <Text style={[styles.title, textStyle]}>{title || ""}</Text>
         </View>
     );
 };

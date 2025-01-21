@@ -49,8 +49,32 @@ const MainLayout = () => {
                     headerShown: false,
                 }}
             >
-                <Stack.Screen
+                {/* <Stack.Screen
                     name="(main)/postDetail/[id]"
+                    options={{
+                        presentation: "transparentModal",
+                        animation: "fade",
+                        headerShown: false,
+                    }}
+                /> */}
+                <Stack.Screen
+                    name="(main)/postLikes/[id]"
+                    options={{
+                        presentation: "transparentModal",
+                        animation: "fade",
+                        headerShown: false,
+                    }}
+                />
+                <Stack.Screen
+                    name="(main)/followers/[id]"
+                    options={{
+                        presentation: "transparentModal",
+                        animation: "fade",
+                        headerShown: false,
+                    }}
+                />
+                <Stack.Screen
+                    name="(main)/following/[id]"
                     options={{
                         presentation: "transparentModal",
                         animation: "fade",

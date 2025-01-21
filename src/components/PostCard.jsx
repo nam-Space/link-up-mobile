@@ -94,6 +94,10 @@ const PostCard = ({
         router.push(`/postDetail/${item?.id}`);
     };
 
+    const openPostLikes = () => {
+        router.push(`/postLikes/${item?.id}`);
+    };
+
     const onLike = async () => {
         if (liked) {
             let updateLikes = likes.filter((like) => like.userId != user?.id);
@@ -263,7 +267,10 @@ const PostCard = ({
                             }
                         />
                     </TouchableOpacity>
-                    <Text style={styles.count}>{likes?.length || "0"}</Text>
+
+                    <TouchableOpacity onPress={openPostLikes}>
+                        <Text style={styles.count}>{likes?.length}</Text>
+                    </TouchableOpacity>
                 </View>
                 <View style={styles.footerButton}>
                     <TouchableOpacity onPress={openPostDetails}>
@@ -304,7 +311,7 @@ const styles = StyleSheet.create({
         padding: 10,
         paddingVertical: 12,
         backgroundColor: "white",
-        borderWidth: 0.5,
+        borderWidth: 1,
         borderColor: theme.colors.gray,
         shadowColor: "#000",
     },

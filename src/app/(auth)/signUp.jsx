@@ -1,4 +1,13 @@
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 import React, { useRef, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { StatusBar } from "expo-status-bar";
@@ -49,62 +58,92 @@ const SignUp = () => {
     };
 
     return (
-        <ScreenWrapper>
-            <StatusBar style="dark" />
-            <View style={styles.container}>
-                <BackButton />
-                <View>
-                    <Text style={styles.welcomeText}>Let's</Text>
-                    <Text style={styles.welcomeText}>Get Started</Text>
-                </View>
-                <View style={styles.form}>
-                    <Text
-                        style={{ fontSize: hp(1.5), color: theme.colors.text }}
-                    >
-                        Please fill the details to create an account
-                    </Text>
-                    <Input
-                        icon={<Icon name="user" size={26} strokeWidth={1.6} />}
-                        placeholder="Enter your name"
-                        onChangeText={(val) => (nameRef.current = val)}
-                    />
-                    <Input
-                        icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
-                        placeholder="Enter your email"
-                        onChangeText={(val) => (emailRef.current = val)}
-                    />
-                    <Input
-                        icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
-                        placeholder="Enter your password"
-                        secureTextEntry
-                        onChangeText={(val) => (passwordRef.current = val)}
-                    />
-                    <Button
-                        title="Sign up"
-                        loading={loading}
-                        onPress={onSubmit}
-                    />
-                </View>
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>
-                        Already have an account?
-                    </Text>
-                    <Pressable onPress={() => router.replace("/login")}>
-                        <Text
-                            style={[
-                                styles.footerText,
-                                {
-                                    color: theme.colors.primaryDark,
-                                    fontWeight: theme.fonts.semibold,
-                                },
-                            ]}
-                        >
-                            Login
-                        </Text>
-                    </Pressable>
-                </View>
-            </View>
-        </ScreenWrapper>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ flex: 1 }}
+        >
+            <ScrollView showsVerticalScrollIndicator={false}>
+                <ScreenWrapper>
+                    <StatusBar style="dark" />
+                    <View style={styles.container}>
+                        <BackButton />
+                        <View>
+                            <Text style={styles.welcomeText}>Let's</Text>
+                            <Text style={styles.welcomeText}>Get Started</Text>
+                        </View>
+                        <View style={styles.form}>
+                            <Text
+                                style={{
+                                    fontSize: hp(1.5),
+                                    color: theme.colors.text,
+                                }}
+                            >
+                                Please fill the details to create an account
+                            </Text>
+                            <Input
+                                icon={
+                                    <Icon
+                                        name="user"
+                                        size={26}
+                                        strokeWidth={1.6}
+                                    />
+                                }
+                                placeholder="Enter your name"
+                                onChangeText={(val) => (nameRef.current = val)}
+                            />
+                            <Input
+                                icon={
+                                    <Icon
+                                        name="mail"
+                                        size={26}
+                                        strokeWidth={1.6}
+                                    />
+                                }
+                                placeholder="Enter your email"
+                                onChangeText={(val) => (emailRef.current = val)}
+                            />
+                            <Input
+                                icon={
+                                    <Icon
+                                        name="lock"
+                                        size={26}
+                                        strokeWidth={1.6}
+                                    />
+                                }
+                                placeholder="Enter your password"
+                                secureTextEntry
+                                onChangeText={(val) =>
+                                    (passwordRef.current = val)
+                                }
+                            />
+                            <Button
+                                title="Sign up"
+                                loading={loading}
+                                onPress={onSubmit}
+                            />
+                        </View>
+                        <View style={styles.footer}>
+                            <Text style={styles.footerText}>
+                                Already have an account?
+                            </Text>
+                            <Pressable onPress={() => router.replace("/login")}>
+                                <Text
+                                    style={[
+                                        styles.footerText,
+                                        {
+                                            color: theme.colors.primaryDark,
+                                            fontWeight: theme.fonts.semibold,
+                                        },
+                                    ]}
+                                >
+                                    Login
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </ScreenWrapper>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 

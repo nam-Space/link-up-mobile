@@ -1,7 +1,10 @@
 import {
     Alert,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     View,
@@ -92,74 +95,82 @@ const EditProfile = () => {
             : getUserImageSrc(user?.image);
 
     return (
-        <ScreenWrapper>
-            <View style={styles.container}>
-                <ScrollView style={{ flex: 1 }}>
-                    <Header title={"Edit Profile"} />
-                    <View style={styles.form}>
-                        <View style={styles.avatarContainer}>
-                            <Image source={imageSource} style={styles.avatar} />
-                            <Pressable
-                                style={styles.cameraIcon}
-                                onPress={onPickImage}
-                            >
-                                <Icon
-                                    name="camera"
-                                    size={20}
-                                    strokeWidth={2.5}
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ flex: 1 }}
+        >
+            <ScrollView style={{ flex: 1 }}>
+                <ScreenWrapper>
+                    <View style={styles.container}>
+                        <Header title={"Edit Profile"} />
+                        <View style={styles.form}>
+                            <View style={styles.avatarContainer}>
+                                <Image
+                                    source={imageSource}
+                                    style={styles.avatar}
                                 />
-                            </Pressable>
+                                <Pressable
+                                    style={styles.cameraIcon}
+                                    onPress={onPickImage}
+                                >
+                                    <Icon
+                                        name="camera"
+                                        size={20}
+                                        strokeWidth={2.5}
+                                    />
+                                </Pressable>
+                            </View>
+                            <Text
+                                style={{
+                                    fontSize: hp(1.5),
+                                    color: theme.colors.text,
+                                }}
+                            >
+                                Please fill your profile details
+                            </Text>
+                            <Input
+                                icon={<Icon name="user" />}
+                                placeholder="Enter your name"
+                                value={user.name}
+                                onChangeText={(val) =>
+                                    setUser({ ...user, name: val })
+                                }
+                            />
+                            <Input
+                                icon={<Icon name="call" />}
+                                placeholder="Enter your phone number"
+                                value={user.phoneNumber}
+                                onChangeText={(val) =>
+                                    setUser({ ...user, phoneNumber: val })
+                                }
+                            />
+                            <Input
+                                icon={<Icon name="location" />}
+                                placeholder="Enter your address"
+                                value={user.address}
+                                onChangeText={(val) =>
+                                    setUser({ ...user, address: val })
+                                }
+                            />
+                            <Input
+                                placeholder="Enter your bio"
+                                value={user.bio}
+                                multiline={true}
+                                containerStyle={styles.bio}
+                                onChangeText={(val) =>
+                                    setUser({ ...user, bio: val })
+                                }
+                            />
+                            <Button
+                                title="Update"
+                                loading={loading}
+                                onPress={onSubmit}
+                            />
                         </View>
-                        <Text
-                            style={{
-                                fontSize: hp(1.5),
-                                color: theme.colors.text,
-                            }}
-                        >
-                            Please fill your profile details
-                        </Text>
-                        <Input
-                            icon={<Icon name="user" />}
-                            placeholder="Enter your name"
-                            value={user.name}
-                            onChangeText={(val) =>
-                                setUser({ ...user, name: val })
-                            }
-                        />
-                        <Input
-                            icon={<Icon name="call" />}
-                            placeholder="Enter your phone number"
-                            value={user.phoneNumber}
-                            onChangeText={(val) =>
-                                setUser({ ...user, phoneNumber: val })
-                            }
-                        />
-                        <Input
-                            icon={<Icon name="location" />}
-                            placeholder="Enter your address"
-                            value={user.address}
-                            onChangeText={(val) =>
-                                setUser({ ...user, address: val })
-                            }
-                        />
-                        <Input
-                            placeholder="Enter your bio"
-                            value={user.bio}
-                            multiline={true}
-                            containerStyle={styles.bio}
-                            onChangeText={(val) =>
-                                setUser({ ...user, bio: val })
-                            }
-                        />
-                        <Button
-                            title="Update"
-                            loading={loading}
-                            onPress={onSubmit}
-                        />
                     </View>
-                </ScrollView>
-            </View>
-        </ScreenWrapper>
+                </ScreenWrapper>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 

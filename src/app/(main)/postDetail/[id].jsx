@@ -21,7 +21,6 @@ import { theme } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import Loading from "@/components/Loading";
 import PostCard from "@/components/PostCard";
-import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import Input from "@/components/input";
 import Icon from "@/assets/icons";
 import CommentItem from "@/components/CommentItem";
@@ -30,9 +29,10 @@ import useGetPostDetail from "@/hooks/useGetPostDetail";
 import useGetComments from "@/hooks/useGetComments";
 import Header from "@/components/Header";
 import ScreenWrapper from "@/components/ScreenWrapper";
+import { createNotification } from "@/services/notificationService";
 
 const PostDetail = () => {
-    const { id } = useLocalSearchParams();
+    const { id, commentId } = useLocalSearchParams();
     const { user } = useApp();
 
     const inputRef = useRef(null);
@@ -80,6 +80,18 @@ const PostDetail = () => {
                 },
                 ...comments,
             ]);
+
+            if (user?.id != post?.userId) {
+                await createNotification({
+                    senderId: user?.id,
+                    receiverId: post.userId,
+                    title: "Commented on your post",
+                    data: JSON.stringify({
+                        postId: post?.id,
+                        commentId: res?.data?.id,
+                    }),
+                });
+            }
 
             inputRef?.current?.clear();
             commentRef.current = "";
@@ -189,6 +201,7 @@ const PostDetail = () => {
                                         user.id === post.userId
                                     }
                                     onDelete={() => onDeleteComment(item)}
+                                    highlight={item?.id == commentId}
                                 />
                             </View>
                         )}

@@ -6,3 +6,4 @@ export const PAGE_SIZE_COMMENT = 10
 export const PAGE_SIZE_POSTLIKE = 10
 export const PAGE_SIZE_FOLLOWING = 10
 export const PAGE_SIZE_FOLLOWER = 10
+export const PAGE_SIZE_NOTIFICATION = 10

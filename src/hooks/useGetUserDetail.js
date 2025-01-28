@@ -1,6 +1,5 @@
 
 import { useEffect, useState } from 'react'
-import { fetchPostDetail } from '@/services/postService';
 import { getUserData } from '@/services/userService';
 
 const useGetUserDetail = (userId) => {

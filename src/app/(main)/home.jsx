@@ -7,7 +7,7 @@ import {
     Text,
     View,
 } from "react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { hp, wp } from "@/helpers/common";
 import { theme } from "@/constants/theme";
@@ -15,27 +15,27 @@ import Icon from "@/assets/icons";
 import { router } from "expo-router";
 import Avatar from "@/components/Avatar";
 import { useApp } from "@/context/AppContext";
-import { fetchPosts, removePost } from "@/services/postService";
+import { removePost } from "@/services/postService";
 import PostCard from "@/components/PostCard";
 import Loading from "@/components/Loading";
 import { supabase } from "@/lib/supabase";
 import { DELETE, INSERT } from "@/constants/channel";
 import useGetPosts from "@/hooks/useGetPosts";
 import { PAGE_SIZE_POST } from "@/constants";
+import AntDesign from "@expo/vector-icons/AntDesign";
 
 const Home = () => {
-    const {
-        posts,
-        setPosts,
-        refreshing,
-        setRefreshing,
-        hasMore,
-        setHasMore,
-        getPosts,
-        onRefresh,
-    } = useGetPosts();
+    const { posts, setPosts, refreshing, hasMore, getPosts, onRefresh } =
+        useGetPosts();
 
-    const { user } = useApp();
+    const { user, channels } = useApp();
+
+    const totalUnread =
+        channels.length > 0
+            ? channels.reduce((sum, channel) => {
+                  return sum + channel.countUnread();
+              }, 0)
+            : 0;
 
     const handleListenPost = (payload) => {
         if (payload.eventType === DELETE) {
@@ -173,6 +173,40 @@ const Home = () => {
                                 strokeWidth={2}
                                 color={theme.colors.text}
                             />
+                        </Pressable>
+                        <Pressable onPress={() => router.push("conversation")}>
+                            <View>
+                                <AntDesign
+                                    name="message1"
+                                    size={hp(3.2)}
+                                    strokeWidth={2}
+                                    color={theme.colors.text}
+                                />
+                                {totalUnread > 0 && (
+                                    <View
+                                        style={{
+                                            position: "absolute",
+                                            right: -5,
+                                            backgroundColor: "red",
+                                            borderRadius: hp(2) / 2,
+                                            color: "white",
+                                            width: hp(2),
+                                            height: hp(2),
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                fontSize: hp(1.4),
+                                                color: "white",
+                                            }}
+                                        >
+                                            {totalUnread}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
                         </Pressable>
                         <Pressable
                             onPress={() => router.push(`profile/${user.id}`)}

@@ -1,5 +1,24 @@
 import { supabase } from "@/lib/supabase"
 
+export const getAllUserData = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select(`
+                *
+            `)
+
+        if (error) {
+            console.log('getAllUserData error: ', error)
+            return { success: false, msg: error?.message }
+        }
+        return { success: true, data }
+    } catch (error) {
+        console.log('getAllUserData error: ', error)
+        return { success: false, msg: error.message }
+    }
+}
+
 export const getUserData = async (userId) => {
     try {
         const { data, error } = await supabase

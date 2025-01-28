@@ -29,6 +29,7 @@ import { createFollow, removeFollow } from "@/services/followService";
 import Popover from "react-native-popover-view";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { DELETE, INSERT, UPDATE } from "@/constants/channel";
+import { useChatContext } from "stream-chat-expo";
 
 const Profile = () => {
     const { user: currentUser } = useApp();
@@ -150,6 +151,7 @@ const Profile = () => {
 export default Profile;
 
 const UserHeader = ({ handleLogout }) => {
+    const { client } = useChatContext();
     const { user: currentUser, setUser: setCurrentUser } = useApp();
     const { id } = useLocalSearchParams();
 
@@ -262,6 +264,14 @@ const UserHeader = ({ handleLogout }) => {
 
     const handleReportPost = () => {
         Alert.alert("Notification", "Sorry! This feature is updating");
+    };
+
+    const handleNavigateChat = async () => {
+        const channel = client.channel("messaging", {
+            members: [currentUser?.id, user?.id],
+        });
+        await channel.watch();
+        router.push(`/chat/${channel.cid}`);
     };
 
     const checkUserFollow = user?.followers?.some(
@@ -423,6 +433,7 @@ const UserHeader = ({ handleLogout }) => {
                             >
                                 <Button
                                     title="Chat"
+                                    onPress={() => handleNavigateChat()}
                                     buttonStyle={{
                                         backgroundColor: theme.colors.gray,
                                         paddingHorizontal: 10,

@@ -1,5 +1,6 @@
 export const supabaseUrl = process.env.EXPO_PUBLIC_API_URL
 export const supabaseAnonKey = process.env.EXPO_PUBLIC_API_KEY
+export const chatMessagingApiKey = process.env.EXPO_PUBLIC_API_KEY_CHAT_MESSAGING
 
 export const PAGE_SIZE_POST = 10
 export const PAGE_SIZE_COMMENT = 10

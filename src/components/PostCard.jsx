@@ -1,6 +1,5 @@
 import {
     Alert,
-    Easing,
     Image,
     Share,
     StyleSheet,

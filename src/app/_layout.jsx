@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { client } from "@/utils/streamChat";
 import { Chat, OverlayProvider } from "stream-chat-expo";
 import { getUserImageSrc } from "@/services/imageService";
+import { tokenProvider } from "@/utils/tokenProvider";
 
 const _layout = () => {
     return (
@@ -42,13 +43,14 @@ const MainLayout = () => {
         let res = await getUserData(userId);
         if (res.success) {
             const user = res.data;
+            const token = await tokenProvider();
             await client.connectUser(
                 {
                     id: user.id,
                     name: user.name,
                     image: getUserImageSrc(user.image)?.uri,
                 },
-                client.devToken(user.id)
+                token
             );
             setUserData(user);
         }

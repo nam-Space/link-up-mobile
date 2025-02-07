@@ -8,16 +8,20 @@ import {
     Thread,
     useChatContext,
 } from "stream-chat-expo";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import Loading from "@/components/Loading";
 import { hp, wp } from "@/helpers/common";
 import { useApp } from "@/context/AppContext";
 import { theme } from "@/constants/theme";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useStreamVideoClient } from "@stream-io/video-react-native-sdk";
+import * as Crypto from "expo-crypto";
 
 const Chat = () => {
     const { user: currentUser } = useApp();
     const { cid } = useLocalSearchParams();
     const { client } = useChatContext();
+    const videoClient = useStreamVideoClient();
 
     const [channel, setChannel] = useState();
     const [thread, setThread] = useState();
@@ -39,11 +43,29 @@ const Chat = () => {
         fetchChannel();
     }, [cid, currentUser]);
 
+    const joinCall = async () => {
+        const members = Object.values(channel.state.members).map((member) => {
+            return {
+                user_id: member.user_id,
+            };
+        });
+
+        const call = videoClient.call("default", Crypto.randomUUID());
+        await call.getOrCreate({
+            ring: true,
+            data: {
+                members,
+            },
+        });
+    };
+
     if (!channel) {
         return (
             <View
                 style={{
-                    marginVertical: 200,
+                    flex: 1,
+                    alignItems: "center",
+                    justifyContent: "center",
                 }}
             >
                 <Loading />
@@ -73,6 +95,14 @@ const Chat = () => {
                                 </Text>
                             </View>
                         </View>
+                    ),
+                    headerRight: () => (
+                        <Ionicons
+                            name="call"
+                            size={24}
+                            color="black"
+                            onPress={joinCall}
+                        />
                     ),
                 }}
             />

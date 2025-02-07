@@ -9,6 +9,8 @@ import { client } from "@/utils/streamChat";
 import { Chat, OverlayProvider } from "stream-chat-expo";
 import { getUserImageSrc } from "@/services/imageService";
 import { tokenProvider } from "@/utils/tokenProvider";
+import VideoProvider from "@/context/VideoProvider";
+import CallProvider from "@/context/CallProvider";
 
 const _layout = () => {
     return (
@@ -21,7 +23,7 @@ const _layout = () => {
 export default _layout;
 
 const MainLayout = () => {
-    const { user, setUserData } = useApp();
+    const { setUserData } = useApp();
 
     useEffect(() => {
         supabase.auth.onAuthStateChange((_event, session) => {
@@ -38,20 +40,21 @@ const MainLayout = () => {
     }, []);
 
     const updateUserData = async (userId) => {
-        if (client.userID) return;
-
         let res = await getUserData(userId);
         if (res.success) {
             const user = res.data;
             const token = await tokenProvider();
-            await client.connectUser(
-                {
-                    id: user.id,
-                    name: user.name,
-                    image: getUserImageSrc(user.image)?.uri,
-                },
-                token
-            );
+            if (!client.user) {
+                await client.connectUser(
+                    {
+                        id: user.id,
+                        name: user.name,
+                        image: getUserImageSrc(user.image)?.uri,
+                    },
+                    token
+                );
+            }
+
             setUserData(user);
         }
     };
@@ -60,48 +63,46 @@ const MainLayout = () => {
         <GestureHandlerRootView style={{ flex: 1 }}>
             <OverlayProvider>
                 <Chat client={client}>
-                    {/* Ẩn StatusBar */}
-                    <StatusBar
-                        style="light"
-                        translucent={true}
-                        backgroundColor="transparent"
-                    />
-                    <Stack
-                        screenOptions={{
-                            headerShown: false,
-                        }}
-                    >
-                        <Stack.Screen
-                            name="(main)/conversation"
-                            options={{
-                                headerShown: false,
-                            }}
-                        />
-                        <Stack.Screen
-                            name="(main)/postLikes/[id]"
-                            options={{
-                                presentation: "transparentModal",
-                                animation: "fade",
-                                headerShown: false,
-                            }}
-                        />
-                        <Stack.Screen
-                            name="(main)/followers/[id]"
-                            options={{
-                                presentation: "transparentModal",
-                                animation: "fade",
-                                headerShown: false,
-                            }}
-                        />
-                        <Stack.Screen
-                            name="(main)/following/[id]"
-                            options={{
-                                presentation: "transparentModal",
-                                animation: "fade",
-                                headerShown: false,
-                            }}
-                        />
-                    </Stack>
+                    <VideoProvider>
+                        <CallProvider>
+                            <Stack
+                                screenOptions={{
+                                    headerShown: false,
+                                }}
+                            >
+                                <Stack.Screen
+                                    name="(main)/conversation"
+                                    options={{
+                                        headerShown: false,
+                                    }}
+                                />
+                                <Stack.Screen
+                                    name="(main)/postLikes/[id]"
+                                    options={{
+                                        presentation: "transparentModal",
+                                        animation: "fade",
+                                        headerShown: false,
+                                    }}
+                                />
+                                <Stack.Screen
+                                    name="(main)/followers/[id]"
+                                    options={{
+                                        presentation: "transparentModal",
+                                        animation: "fade",
+                                        headerShown: false,
+                                    }}
+                                />
+                                <Stack.Screen
+                                    name="(main)/following/[id]"
+                                    options={{
+                                        presentation: "transparentModal",
+                                        animation: "fade",
+                                        headerShown: false,
+                                    }}
+                                />
+                            </Stack>
+                        </CallProvider>
+                    </VideoProvider>
                 </Chat>
             </OverlayProvider>
         </GestureHandlerRootView>

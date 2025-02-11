@@ -57,6 +57,8 @@ const Chat = () => {
                 members,
             },
         });
+
+        router.push(`/call`);
     };
 
     if (!channel) {

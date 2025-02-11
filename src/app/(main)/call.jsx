@@ -36,10 +36,6 @@ const CallScreen = () => {
         );
     }
 
-    // useEffect(() => {
-
-    // })
-
     return (
         <StreamCall call={call}>
             <RingingCallContent />

@@ -11,6 +11,7 @@ import { getUserImageSrc } from "@/services/imageService";
 import { tokenProvider } from "@/utils/tokenProvider";
 import VideoProvider from "@/context/VideoProvider";
 import CallProvider from "@/context/CallProvider";
+import NotificationsProvider from "@/context/NotificationsProvider";
 
 const _layout = () => {
     return (
@@ -63,46 +64,48 @@ const MainLayout = () => {
         <GestureHandlerRootView style={{ flex: 1 }}>
             <OverlayProvider>
                 <Chat client={client}>
-                    <VideoProvider>
-                        <CallProvider>
-                            <Stack
-                                screenOptions={{
-                                    headerShown: false,
-                                }}
-                            >
-                                <Stack.Screen
-                                    name="(main)/conversation"
-                                    options={{
+                    <NotificationsProvider>
+                        <VideoProvider>
+                            <CallProvider>
+                                <Stack
+                                    screenOptions={{
                                         headerShown: false,
                                     }}
-                                />
-                                <Stack.Screen
-                                    name="(main)/postLikes/[id]"
-                                    options={{
-                                        presentation: "transparentModal",
-                                        animation: "fade",
-                                        headerShown: false,
-                                    }}
-                                />
-                                <Stack.Screen
-                                    name="(main)/followers/[id]"
-                                    options={{
-                                        presentation: "transparentModal",
-                                        animation: "fade",
-                                        headerShown: false,
-                                    }}
-                                />
-                                <Stack.Screen
-                                    name="(main)/following/[id]"
-                                    options={{
-                                        presentation: "transparentModal",
-                                        animation: "fade",
-                                        headerShown: false,
-                                    }}
-                                />
-                            </Stack>
-                        </CallProvider>
-                    </VideoProvider>
+                                >
+                                    <Stack.Screen
+                                        name="(main)/conversation"
+                                        options={{
+                                            headerShown: false,
+                                        }}
+                                    />
+                                    <Stack.Screen
+                                        name="(main)/postLikes/[id]"
+                                        options={{
+                                            presentation: "transparentModal",
+                                            animation: "fade",
+                                            headerShown: false,
+                                        }}
+                                    />
+                                    <Stack.Screen
+                                        name="(main)/followers/[id]"
+                                        options={{
+                                            presentation: "transparentModal",
+                                            animation: "fade",
+                                            headerShown: false,
+                                        }}
+                                    />
+                                    <Stack.Screen
+                                        name="(main)/following/[id]"
+                                        options={{
+                                            presentation: "transparentModal",
+                                            animation: "fade",
+                                            headerShown: false,
+                                        }}
+                                    />
+                                </Stack>
+                            </CallProvider>
+                        </VideoProvider>
+                    </NotificationsProvider>
                 </Chat>
             </OverlayProvider>
         </GestureHandlerRootView>

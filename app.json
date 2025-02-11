@@ -43,7 +43,8 @@
                 "android.permission.SYSTEM_ALERT_WINDOW",
                 "android.permission.WAKE_LOCK"
             ],
-            "package": "com.anonymous.linkup"
+            "package": "com.anonymous.linkup",
+            "googleServicesFile": "./google-services.json"
         },
         "web": {
             "bundler": "metro",
@@ -87,7 +88,15 @@
                     "savePhotosPermission": "$(PRODUCT_NAME) would like to save photos to your photo gallery after downloading from a message."
                 }
             ],
-            "@stream-io/video-react-native-sdk",
+            [
+                "@stream-io/video-react-native-sdk",
+                {
+                    "ringingPushNotifications": {
+                        "showWhenLockedAndroid": true
+                    },
+                    "androidKeepCallAlive": true
+                }
+            ],
             [
                 "@config-plugins/react-native-webrtc",
                 {
@@ -105,7 +114,10 @@
                         ]
                     }
                 }
-            ]
+            ],
+            "@react-native-firebase/app",
+            "@react-native-firebase/messaging",
+            "@config-plugins/react-native-callkeep"
         ],
         "experiments": {
             "typedRoutes": true
